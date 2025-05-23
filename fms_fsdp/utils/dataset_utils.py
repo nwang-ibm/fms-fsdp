@@ -15,6 +15,9 @@ from transformers import AutoTokenizer  # type: ignore
 
 from fms_fsdp.utils.checkpointing_utils import get_latest
 
+# TODO: long doc breaking
+# TODO: titan PR adds
+# TODO: zero-len file asserts/check
 
 """
 The following distributed dataloaders are designed around 3 main principles:
@@ -343,9 +346,9 @@ class ArrowHandler(_ShardFileHandler):
     Non-standard data format, though.
     """
 
-    def __init__(self, col_names: List[str] = ["tokens"]):
+    def __init__(self, col_names: List[str] = ["text", "contents", "tokens"]):
         self.col_names = col_names
-        
+
     def is_legal(self, filepath: str):
         return "arrow" in os.path.splitext(filepath)[1]
 
@@ -356,14 +359,18 @@ class ArrowHandler(_ShardFileHandler):
         return self.open(path).num_record_batches
 
     def get(self, reader: pa.RecordBatchFileReader, index: int, drop_tokens: Set):
+        assert (
+            index < reader.num_record_batches
+        ), f"Illegal index {index} in set of {reader.num_record_batches} documents"
         frame = reader.get_batch(index)
-        
         doc = None
         for name in self.col_names:
             if name in frame.column_names:
                 doc = frame[name]
                 break
-        assert doc is not None, f"None of column names {self.col_names} found in file headers {frame.column_names}"
+        assert (
+            doc is not None, 
+        ), f"None of column names {self.col_names} found in file headers {frame.column_names}"
         if len(doc) > 0 and doc[0].as_py() in drop_tokens:
             doc = doc.slice(1, len(doc) - 1)
         # Recheck len for edge case where doc=[eos]
@@ -383,7 +390,11 @@ class ParquetHandler(_ShardFileHandler):
     before getting/slicing. However, this is a standard and widely-used data format.
     """
 
+<<<<<<< HEAD
     def __init__(self, tokenizer_path: str, col_names: List[str] = ["text"]):
+=======
+    def __init__(self, tokenizer_path: str, col_names: List[str] = ["text", "contents", "tokens"]):
+>>>>>>> 9365cb2 (Add multicol support)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         self.col_names = col_names
 
