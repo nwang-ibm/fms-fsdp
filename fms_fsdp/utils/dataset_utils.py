@@ -1,4 +1,4 @@
-import csv
+    import csv
 import logging
 import math
 import os
@@ -1110,8 +1110,6 @@ class StreamingDocDataset(_StatefulDataset):
                     reader = csv.DictReader(csvfile)
                     for row in reader:
                         fullpath = row["dataset/filename"]
-<<<<<<< HEAD
-=======
                         prefix = fullpath.find(dataset + "/")
                         if prefix >= 0:
                             key = fullpath[prefix + len(dataset) + 1 :]
@@ -1137,15 +1135,15 @@ class StreamingDocDataset(_StatefulDataset):
             # Assemble length of each owned shard file
             doc_counts = {}
             if len(countfiles) > 0:
-            # Count file exists, use it
-            with open(countpath, "r") as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    fullpath = row["dataset/filename"]
-                    prefix = fullpath.find(dataset)
-                    if prefix >= 0:
-                        key = fullpath[prefix + len(dataset) + 1 :]
-                        doc_counts[key] = int(row["documents"])
+                # Count file exists, use it
+                with open(countpath, "r") as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        fullpath = row["dataset/filename"]
+                        prefix = fullpath.find(dataset)
+                        if prefix >= 0:
+                            key = fullpath[prefix + len(dataset) + 1 :]
+                            doc_counts[key] = int(row["documents"])
             else:
                 # Count file does not exist, touch every owned file for length
                 doc_counts = {
