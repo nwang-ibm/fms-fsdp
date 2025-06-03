@@ -1080,7 +1080,7 @@ class StreamingDocDataset(_StatefulDataset):
             # listdir, assemble shardfraglist (ind -> shard, frag)
             shards = [
                 os.path.join(root, name)[len(datapath) + 1 :]
-                for root, dirs, files in os.walk(datapath, topdown=False)
+                for root, dirs, files in os.walk(datapath, topdown=False, followlinks=True)
                 for name in files
                 if self.filehandler.is_legal(os.path.join(root, name))
                 and os.path.getsize(os.path.join(root, name)) > 1_000_000
