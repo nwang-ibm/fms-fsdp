@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -324,7 +325,9 @@ class Checkpointer:
     ):
         # Note: metadata kwargs cannot contain any of:
         # (step, model)
-        save_name = os.path.join(self.ckp_path, "step_" + str(step) + "_ckp.pth")
+        pth_path = os.path.join(self.ckp_path[:-12], "pth", "step_" + str(step))
+        os.makedirs(pth_path, exist_ok=True)
+        save_name = os.path.join(pth_path, "consolidated.00.pth")
         save_time = time.time()
         with FSDP.state_dict_type(
             model,
@@ -343,3 +346,32 @@ class Checkpointer:
         self.report("Checkpoint written", model_save_time=time.time() - save_time)
 
         return self._cleanup()
+
+
+def convert_state_dict_to_mamba_ssm(model):
+    original_sd = model.state_dict()
+    state_dict = {}
+
+    for orig_k in list(original_sd.keys()):
+        # k = orig_k.replace("model", "backbone")
+        k = orig_k.replace("embed_tokens", "embedding")
+        k = k.replace("mamba", "mixer")
+        k = k.replace("final_layernorm", "norm_f")
+        k = re.sub(r"(\d+)\.input_layernorm\.", r"\1.norm.", k)
+        k = re.sub(r"(\d+)\.pre_ff_layernorm\.", r"\1.norm2.", k)
+        k = k.replace("feed_forward.down_proj", "mlp.fc2")
+        k = k.replace("self_attn.o_proj", "mixer.out_proj")
+        if k != orig_k:
+            state_dict[k.replace("model", "backbone")] = original_sd.pop(orig_k)
+    for i in range(len(model.model.layers)):
+        w1 = original_sd.pop(f"model.layers.{i}.feed_forward.up_proj.weight")
+        w2 = original_sd.pop(f"model.layers.{i}.feed_forward.gate_proj.weight")
+        state_dict[f"backbone.layers.{i}.mlp.fc1.weight"] = torch.cat([w1,w2], dim=0)
+        if f"model.layers.{i}.self_attn.q_proj.weight" in original_sd:
+            q = original_sd.pop(f"model.layers.{i}.self_attn.q_proj.weight")
+            k = original_sd.pop(f"model.layers.{i}.self_attn.k_proj.weight")
+            v = original_sd.pop(f"model.layers.{i}.self_attn.v_proj.weight")
+            state_dict[f"backbone.layers.{i}.mixer.in_proj.weight"] = torch.cat([q,k,v], dim=0)
+    state_dict["lm_head.weight"] = original_sd.pop("lm_head.weight")
+    assert len(original_sd)==0, original_sd.keys()
+    return {"model_state":state_dict}
