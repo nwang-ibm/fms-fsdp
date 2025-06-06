@@ -1083,7 +1083,7 @@ class StreamingDocDataset(_StatefulDataset):
                 for root, dirs, files in os.walk(datapath, topdown=False, followlinks=True)
                 for name in files
                 if self.filehandler.is_legal(os.path.join(root, name))
-                and os.path.getsize(os.path.join(root, name)) > 1_000_000
+                #and os.path.getsize(os.path.join(root, name)) > 1_000_000
                 # 1mb minimum file size to prevent empty files
             ]
             shards.sort()  # Ensure consistent sharding across machines
